@@ -1,0 +1,6 @@
+*.pyc
+*.csv
+*.json
+*.parquet
+mlruns/*
+artifacts/*

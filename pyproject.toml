@@ -4,8 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Oz"]
 readme = "README.md"
-packages = [{ include = "app" },
-            {include = "utils", from = "app"}]
+packages = [{ include = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -24,8 +23,11 @@ torch = "^2.5.1"
 xgboost = "^2.1.2"
 pyyaml = "^6.0.2"
 streamlit = "^1.40.1"
-fastapi = "^0.115.5"
+fastapi = {extras = ["standard"], version = "^0.115.6"}
 uvicorn = "^0.32.1"
+tqdm = "^4.67.1"
+python-dotenv = "^1.0.1"
+requests = "^2.32.3"
 
 
 [tool.poetry.group.dev.dependencies]

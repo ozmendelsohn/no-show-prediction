@@ -4,3 +4,5 @@
 *.parquet
 mlruns/*
 artifacts/*
+src/frontend/node_modules/*
+.env

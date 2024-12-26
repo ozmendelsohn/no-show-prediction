@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Calendar</title>
+    <style>
+        :root {
+            --border-color: #dadce0;
+            --hover-color: #f8f9fa;
+            --primary-blue: #1a73e8;
+            --text-primary: #3c4043;
+            --text-secondary: #70757a;
+        }
+
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
+            color: var(--text-primary);
+        }
+
+        .calendar-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            padding: 8px 0 24px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .calendar-header h1 {
+            font-size: 22px;
+            font-weight: 400;
+            margin: 0;
+            padding-right: 24px;
+        }
+
+        .today-button {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: 50px repeat(7, 1fr);
+            border-right: 1px solid var(--border-color);
+        }
+
+        .time-column {
+            color: var(--text-secondary);
+            font-size: 10px;
+            padding: 0 8px;
+            text-align: right;
+            transform: translateY(-6px);
+        }
+
+        .calendar-cell {
+            border-left: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            min-height: 48px;
+            padding: 2px;
+        }
+
+        .calendar-cell:hover {
+            background-color: var(--hover-color);
+        }
+
+        .day-header {
+            padding: 8px;
+            text-align: center;
+            border-left: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .day-name {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        .day-number {
+            font-size: 26px;
+            margin-top: 4px;
+        }
+
+        .appointment {
+            font-size: 12px;
+            padding: 4px 8px;
+            margin: 1px 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: filter 0.2s;
+            height: 44px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .appointment:hover {
+            filter: brightness(0.95);
+        }
+
+        .appointment.cardiology {
+            background-color: #fad1d1;
+            color: #c53929;
+        }
+
+        .appointment.dentistry {
+            background-color: #ceead6;
+            color: #137333;
+        }
+
+        .appointment.orthopedics {
+            background-color: #feefc3;
+            color: #b06000;
+        }
+
+        .appointment.general {
+            background-color: #d2e3fc;
+            color: #1a73e8;
+        }
+
+        .appointment.yellow {
+            background-color: #fff8c5;
+            color: #806102;
+        }
+
+        .current-time-indicator {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--primary-blue);
+        }
+
+        .current-time-indicator::before {
+            content: '';
+            position: absolute;
+            left: -4px;
+            top: -4px;
+            width: 8px;
+            height: 8px;
+            background-color: var(--primary-blue);
+            border-radius: 50%;
+        }
+
+        .context-menu {
+            position: fixed;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8px 0;
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .context-menu.active {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .context-menu-item:hover {
+            background-color: var(--hover-color);
+        }
+
+        .context-menu-item i {
+            margin-right: 12px;
+            color: var(--text-secondary);
+            font-size: 18px;
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 8px 0;
+        }
+
+        .appointment {
+            user-select: none;
+        }
+
+        .appointment-time {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        .calendar-toolbar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+            gap: 16px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-button {
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        .nav-button:hover {
+            background: var(--hover-color);
+        }
+
+        .current-period {
+            font-size: 22px;
+            margin-right: auto;
+        }
+
+        .view-options {
+            display: flex;
+            gap: 1px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .view-option {
+            background: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .view-option.active {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .today-cell {
+            background-color: #f8f9fa;
+        }
+
+        .today-number {
+            background-color: var(--primary-blue);
+            color: white;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        .appointment {
+            position: relative;
+            padding-left: 16px;
+        }
+
+        .appointment::before {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 50%;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: currentColor;
+            transform: translateY(-50%);
+        }
+
+        .appointment:hover {
+            box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
+        }
+
+        .status-indicator {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #34a853;
+        }
+
+        .status-indicator.pending {
+            background-color: #fbbc04;
+        }
+
+        .calendar-cell.past {
+            background-color: #fafafa;
+        }
+
+        .calendar-cell.past .appointment {
+            opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+            .calendar-container {
+                padding: 8px;
+            }
+            
+            .view-options {
+                display: none;
+            }
+            
+            .calendar-toolbar {
+                flex-wrap: wrap;
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        .modal-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .modal-button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .modal-button.primary {
+            background-color: var(--primary-blue);
+            color: white;
+        }
+
+        .modal-button.secondary {
+            background-color: white;
+            border: 1px solid var(--border-color);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background-color: #323232;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .patient-list {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .patient-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+
+        .patient-item:last-child {
+            border-bottom: none;
+        }
+
+        .patient-item:hover {
+            background-color: var(--hover-color);
+        }
+
+        .patient-item.selected {
+            background-color: #e8f0fe;
+        }
+
+        .acuity-score {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 14px;
+            margin-left: 12px;
+        }
+
+        .acuity-high {
+            background-color: #fce8e8;
+            color: #d93025;
+        }
+
+        .acuity-medium {
+            background-color: #fff4e5;
+            color: #ea8600;
+        }
+
+        .acuity-low {
+            background-color: #e6f4ea;
+            color: #137333;
+        }
+
+        .patient-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .patient-name {
+            font-weight: 500;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <h1>Medical Appointments Calendar</h1>
+            <button class="today-button">Today</button>
+        </div>
+
+        <div class="calendar-toolbar">
+            <div class="nav-buttons">
+                <button class="nav-button">
+                    <i class="material-icons">chevron_left</i>
+                </button>
+                <button class="nav-button">
+                    <i class="material-icons">chevron_right</i>
+                </button>
+            </div>
+            <div class="current-period">March 18 - 24, 2024</div>
+            <button class="today-button">Today</button>
+            <div class="view-options">
+                <button class="view-option">Day</button>
+                <button class="view-option active">Week</button>
+                <button class="view-option">Month</button>
+            </div>
+        </div>
+
+        <div class="calendar-grid">
+            <div class="time-column"></div>
+            
+            <!-- Days headers -->
+            <div class="day-header">
+                <div class="day-name">Mon</div>
+                <div class="day-number">18</div>
+            </div>
+            <div class="day-header">
+                <div class="day-name">Tue</div>
+                <div class="day-number">19</div>
+            </div>
+            <div class="day-header">
+                <div class="day-name">Wed</div>
+                <div class="day-number">20</div>
+            </div>
+            <div class="day-header">
+                <div class="day-name">Thu</div>
+                <div class="day-number">21</div>
+            </div>
+            <div class="day-header">
+                <div class="day-name">Fri</div>
+                <div class="day-number">22</div>
+            </div>
+            <div class="day-header">
+                <div class="day-name">Sat</div>
+                <div class="day-number">23</div>
+            </div>
+            <div class="day-header">
+                <div class="day-name">Sun</div>
+                <div class="day-number">24</div>
+            </div>
+
+            <!-- Time slots -->
+            <div class="time-column">8:00</div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Adams - General
+                    <div class="appointment-time">8:00 - 9:00</div>
+                    <div class="status-indicator"></div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Wilson - General
+                    <div class="appointment-time">9:00 - 10:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell">
+                <div class="appointment cardiology">
+                    Dr. Smith - General
+                    <div class="appointment-time">8:00 - 9:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell"></div>
+
+            <div class="time-column">9:00</div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Parker - General
+                    <div class="appointment-time">9:00 - 10:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment yellow">
+                    Dr. White - General
+                    <div class="appointment-time">9:00 - 10:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Johnson - Dentistry
+                    <div class="appointment-time">9:00 - 10:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Lee - General
+                    <div class="appointment-time">9:00 - 10:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Zhang - General
+                    <div class="appointment-time">9:00 - 10:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment cardiology">
+                    Dr. Patel - Cardiology
+                    <div class="appointment-time">9:00 - 10:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment yellow">
+                    Dr. Cohen - General
+                    <div class="appointment-time">9:00 - 10:00</div>
+                </div>
+            </div>
+
+            <div class="time-column">10:00</div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Parker - General
+                    <div class="appointment-time">10:00 - 11:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment yellow">
+                    Dr. Brown - General
+                    <div class="appointment-time">10:00 - 11:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Chen - General
+                    <div class="appointment-time">10:00 - 11:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Kumar - General
+                    <div class="appointment-time">10:00 - 11:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Davis - General
+                    <div class="appointment-time">10:00 - 11:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment cardiology">
+                    Dr. Garcia - General
+                    <div class="appointment-time">10:00 - 11:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Novak - General
+                    <div class="appointment-time">10:00 - 11:00</div>
+                </div>
+            </div>
+
+            <div class="time-column">11:00</div>
+            <div class="calendar-cell">
+                <div class="appointment yellow">
+                    Dr. Thompson - General
+                    <div class="appointment-time">11:00 - 12:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Martinez - General
+                    <div class="appointment-time">11:00 - 12:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Wilson - General
+                    <div class="appointment-time">11:00 - 12:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Anderson - General
+                    <div class="appointment-time">11:00 - 12:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell"></div>
+
+            <div class="time-column">12:00</div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Roberts - General
+                    <div class="appointment-time">12:00 - 13:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Singh - General
+                    <div class="appointment-time">12:00 - 13:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment cardiology">
+                    Dr. Kim - General
+                    <div class="appointment-time">12:00 - 13:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Lopez - General
+                    <div class="appointment-time">12:00 - 13:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment yellow">
+                    Dr. Fischer - General
+                    <div class="appointment-time">12:00 - 13:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Ivanov - General
+                    <div class="appointment-time">12:00 - 13:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment cardiology">
+                    Dr. Ahmed - Cardiology
+                    <div class="appointment-time">12:00 - 13:00</div>
+                </div>
+            </div>
+
+            <div class="time-column">13:00</div>
+            <div class="calendar-cell">
+                <div class="appointment yellow">
+                    Dr. Miller - General
+                    <div class="appointment-time">13:00 - 14:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Young - General
+                    <div class="appointment-time">13:00 - 14:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Scott - General
+                    <div class="appointment-time">13:00 - 14:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment cardiology">
+                    Dr. Wright - General
+                    <div class="appointment-time">13:00 - 14:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Taylor - General
+                    <div class="appointment-time">13:00 - 14:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell"></div>
+
+            <div class="time-column">14:00</div>
+            <div class="calendar-cell">
+                <div class="appointment yellow">
+                    Dr. Evans - General
+                    <div class="appointment-time">14:00 - 15:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Collins - General
+                    <div class="appointment-time">14:00 - 15:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell">
+                <div class="appointment cardiology">
+                    Dr. Murphy - General
+                    <div class="appointment-time">14:00 - 15:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Rogers - General
+                    <div class="appointment-time">14:00 - 15:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell"></div>
+
+            <div class="time-column">15:00</div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Peterson - General
+                    <div class="appointment-time">15:00 - 16:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment yellow">
+                    Dr. Cooper - General
+                    <div class="appointment-time">15:00 - 16:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Reed - General
+                    <div class="appointment-time">15:00 - 16:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Morgan - General
+                    <div class="appointment-time">15:00 - 16:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell"></div>
+
+            <div class="time-column">16:00</div>
+            <div class="calendar-cell">
+                <div class="appointment yellow">
+                    Dr. Bailey - General
+                    <div class="appointment-time">16:00 - 17:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment cardiology">
+                    Dr. Ross - General
+                    <div class="appointment-time">16:00 - 17:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Howard - General
+                    <div class="appointment-time">16:00 - 17:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Ward - General
+                    <div class="appointment-time">16:00 - 17:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell"></div>
+            <div class="calendar-cell"></div>
+
+            <div class="time-column">17:00</div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Torres - General
+                    <div class="appointment-time">17:00 - 18:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Gray - General
+                    <div class="appointment-time">17:00 - 18:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment yellow">
+                    Dr. Müller - General
+                    <div class="appointment-time">17:00 - 18:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Price - General
+                    <div class="appointment-time">17:00 - 18:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Sanders - General
+                    <div class="appointment-time">17:00 - 18:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment cardiology">
+                    Dr. Wong - Cardiology
+                    <div class="appointment-time">17:00 - 18:00</div>
+                </div>
+            </div>
+            <div class="calendar-cell">
+                <div class="appointment general">
+                    Dr. Silva - General
+                    <div class="appointment-time">17:00 - 18:00</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item">
+            <i class="material-icons">edit</i>
+            Edit
+        </div>
+        <div class="context-menu-item">
+            <i class="material-icons">schedule</i>
+            Reschedule
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item">
+            <i class="material-icons">phone</i>
+            Give a Call
+        </div>
+        <div class="context-menu-item">
+            <i class="material-icons">call_split</i>
+            Split Appointment
+        </div>
+    </div>
+
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Appointment</h2>
+                <button class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Doctor</label>
+                    <input type="text" id="editDoctor" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Patient</label>
+                    <input type="text" id="editPatient" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="editStatus" class="form-input">
+                        <option value="confirmed">Confirmed</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="editNotes" class="form-input"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" data-action="cancel">Cancel</button>
+                <button class="modal-button primary" data-action="save">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="rescheduleModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Reschedule Appointment</h2>
+                <button class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="rescheduleDate" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Time</label>
+                    <select id="rescheduleTime" class="form-input">
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" data-action="cancel">Cancel</button>
+                <button class="modal-button primary" data-action="save">Reschedule</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="smsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Make a Call</h2>
+                <button class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Call Type</label>
+                    <select id="smsTemplate" class="form-input">
+                        <option value="reminder">Appointment Reminder</option>
+                        <option value="confirmation">Appointment Confirmation</option>
+                        <option value="cancellation">Cancellation Notice</option>
+                        <option value="custom">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes for Call</label>
+                    <textarea id="smsMessage" class="form-input" rows="4" placeholder="Add notes about the call here..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" data-action="cancel">Cancel</button>
+                <button class="modal-button primary" data-action="send">
+                    <i class="material-icons" style="font-size: 16px; margin-right: 4px;">phone</i>
+                    Make Call
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="splitModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Split Appointment</h2>
+                <button class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Select Patient by Acuity Score</label>
+                    <div id="patientList" class="patient-list">
+                        <!-- Will be populated dynamically -->
+                    </div>
+                </div>
+                <div id="splitTimeSlots" style="margin-top: 16px;">
+                    <!-- Time slots will be shown after patient selection -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button secondary" data-action="cancel">Cancel</button>
+                <button class="modal-button primary" data-action="split">Assign Selected Patient</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Move modals to global scope
+        const modals = {
+            edit: document.getElementById('editModal'),
+            reschedule: document.getElementById('rescheduleModal'),
+            sms: document.getElementById('smsModal'),
+            split: document.getElementById('splitModal')
+        };
+
+        // Add success color style
+        const successColor = '#4caf50';  // Green color for success
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded');
+            
+            const contextMenu = document.getElementById('contextMenu');
+            const appointments = document.querySelectorAll('.appointment');
+            let currentAppointment = null;
+
+            console.log(`Found ${appointments.length} appointments`);
+            console.log('Modals initialized:', Object.keys(modals));
+
+            // Add click handlers to all appointments
+            appointments.forEach((appointment, index) => {
+                appointment.addEventListener('click', function(e) {
+                    console.log(`Appointment ${index + 1} clicked:`, this.textContent);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    currentAppointment = this;
+                    const rect = this.getBoundingClientRect();
+                    
+                    // Position and show context menu
+                    contextMenu.style.top = `${rect.bottom + window.scrollY + 5}px`;
+                    contextMenu.style.left = `${rect.left + window.scrollX}px`;
+                    contextMenu.classList.add('active');
+                    console.log('Context menu shown at:', { top: contextMenu.style.top, left: contextMenu.style.left });
+                });
+            });
+
+            // Add click handlers to context menu items
+            document.querySelectorAll('.context-menu-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    console.log('Context menu item clicked:', this.textContent.trim());
+                    e.preventDefault();
+                    const action = this.textContent.trim();
+                    contextMenu.classList.remove('active');
+
+                    switch(action) {
+                        case 'Edit':
+                            handleEdit();
+                            break;
+                        case 'Reschedule':
+                            handleReschedule();
+                            break;
+                        case 'Give a Call':
+                            handleSMS();
+                            break;
+                        case 'Split Appointment':
+                            handleSplit();
+                            break;
+                    }
+                });
+            });
+
+            // Action handlers
+            function handleEdit() {
+                console.log('Handling Edit action');
+                const modal = modals.edit;
+                const doctorInput = modal.querySelector('#editDoctor');
+                const doctorName = currentAppointment.textContent.split('-')[0].trim();
+                
+                doctorInput.value = doctorName;
+                modal.classList.add('active');
+                console.log('Edit modal opened with doctor:', doctorName);
+            }
+
+            function handleReschedule() {
+                console.log('Handling Reschedule action');
+                const modal = modals.reschedule;
+                populateTimeSlots();
+                modal.classList.add('active');
+                console.log('Reschedule modal opened');
+            }
+
+            function handleSMS() {
+                console.log('Handling SMS action');
+                const modal = modals.sms;
+                const template = modal.querySelector('#smsTemplate');
+                const message = modal.querySelector('#smsMessage');
+                const doctorName = currentAppointment.textContent.split('-')[0].trim();
+                const appointmentTime = currentAppointment.querySelector('.appointment-time').textContent;
+                
+                // Set default template with actual values
+                message.value = `Reminder: You have an appointment tomorrow at ${appointmentTime} with ${doctorName}.`;
+                
+                // Add template change handler
+                template.addEventListener('change', function() {
+                    switch(this.value) {
+                        case 'reminder':
+                            message.value = `Reminder: You have an appointment tomorrow at ${appointmentTime} with ${doctorName}.`;
+                            break;
+                        case 'confirmation':
+                            message.value = `Your appointment with ${doctorName} has been confirmed for ${appointmentTime}.`;
+                            break;
+                        case 'cancellation':
+                            message.value = `Your appointment with ${doctorName} for ${appointmentTime} has been cancelled.`;
+                            break;
+                        case 'custom':
+                            message.value = '';
+                            break;
+                    }
+                });
+                
+                modal.classList.add('active');
+                console.log('SMS modal opened');
+            }
+
+            function handleSplit() {
+                console.log('Handling Split action');
+                const modal = modals.split;
+                const patientList = document.getElementById('patientList');
+                
+                // Generate random patient data with more diverse scores
+                const patients = [
+                    {
+                        name: generateRandomName(),
+                        acuityScore: Math.floor(Math.random() * 3) + 8  // High priority (8-10)
+                    },
+                    {
+                        name: generateRandomName(),
+                        acuityScore: Math.floor(Math.random() * 3) + 5  // Medium priority (5-7)
+                    },
+                    {
+                        name: generateRandomName(),
+                        acuityScore: Math.floor(Math.random() * 4) + 1  // Low priority (1-4)
+                    }
+                ];
+                
+                // Clear existing content
+                patientList.innerHTML = '';
+                
+                // Add patients to the list
+                patients.forEach(patient => {
+                    const patientItem = document.createElement('div');
+                    patientItem.className = 'patient-item';
+                    
+                    // Determine acuity class and icon based on score
+                    let acuityClass, acuityIcon;
+                    if (patient.acuityScore >= 8) {
+                        acuityClass = 'acuity-high';
+                        acuityIcon = 'priority_high';
+                    } else if (patient.acuityScore >= 5) {
+                        acuityClass = 'acuity-medium';
+                        acuityIcon = 'warning';
+                    } else {
+                        acuityClass = 'acuity-low';
+                        acuityIcon = 'info';
+                    }
+                    
+                    patientItem.innerHTML = `
+                        <div class="patient-info">
+                            <i class="material-icons" style="margin-right: 8px; color: inherit;">${acuityIcon}</i>
+                            <span class="patient-name">${patient.name}</span>
+                        </div>
+                        <div class="acuity-score ${acuityClass}">
+                            ${patient.acuityScore}
+                        </div>
+                    `;
+                    
+                    // Add click handler for selection
+                    patientItem.addEventListener('click', () => {
+                        document.querySelectorAll('.patient-item').forEach(item => {
+                            item.classList.remove('selected');
+                        });
+                        patientItem.classList.add('selected');
+                        
+                        // Show time slots after selection
+                        updateSplitTimeSlots();
+                    });
+                    
+                    patientList.appendChild(patientItem);
+                });
+                
+                modal.classList.add('active');
+                console.log('Split modal opened with random patients');
+            }
+
+            function generateRandomName() {
+                const firstNames = ['James', 'Emma', 'Liam', 'Olivia', 'Noah', 'Ava', 'William', 'Sophia', 'Mason', 'Isabella'];
+                const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez'];
+                
+                const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+                const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+                
+                return `${firstName} ${lastName}`;
+            }
+
+            // Update split button handler
+            document.querySelector('#splitModal .modal-button[data-action="split"]').addEventListener('click', function() {
+                const selectedPatient = document.querySelector('.patient-item.selected');
+                if (!selectedPatient) {
+                    showToast('Please select a patient first');
+                    return;
+                }
+                
+                const patientName = selectedPatient.querySelector('.patient-name').textContent;
+                const acuityScore = selectedPatient.querySelector('.acuity-score').textContent;
+                const acuityClass = selectedPatient.querySelector('.acuity-score').classList[1];
+                
+                // Get the original appointment details
+                const originalTime = currentAppointment.querySelector('.appointment-time').textContent;
+                const doctorName = currentAppointment.textContent.split('-')[0].trim();
+                
+                // Create new split appointment
+                const newAppointment = document.createElement('div');
+                newAppointment.className = `appointment ${acuityClass.replace('acuity-', '')}`;
+                newAppointment.innerHTML = `
+                    ${doctorName} - ${patientName}
+                    <div class="appointment-time">${originalTime}</div>
+                    <div class="status-indicator"></div>
+                `;
+                
+                // Replace the original appointment
+                currentAppointment.parentNode.replaceChild(newAppointment, currentAppointment);
+                
+                // Add click handler to new appointment
+                newAppointment.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    currentAppointment = this;
+                    const rect = this.getBoundingClientRect();
+                    contextMenu.style.top = `${rect.bottom + window.scrollY + 5}px`;
+                    contextMenu.style.left = `${rect.left + window.scrollX}px`;
+                    contextMenu.classList.add('active');
+                });
+                
+                // Close modal and show success message
+                modals.split.classList.remove('active');
+                showToast(`Appointment assigned to ${patientName} (Acuity: ${acuityScore})`);
+            });
+
+            // SMS action handler
+            document.querySelector('#smsModal .modal-button[data-action="send"]').addEventListener('click', function() {
+                console.log('Send SMS button clicked');
+                const modal = modals.sms;
+                const button = this;
+                
+                button.disabled = true;
+                button.innerHTML = '<i class="material-icons" style="font-size: 14px;">sync</i> Sending...';
+                console.log('SMS button disabled, showing loading state');
+                
+                setTimeout(() => {
+                    const doctorName = currentAppointment.textContent.split('-')[0].trim();
+                    const appointmentTime = currentAppointment.querySelector('.appointment-time').textContent;
+                    
+                    if (!currentAppointment.querySelector('.sms-sent')) {
+                        const smsIcon = document.createElement('i');
+                        smsIcon.className = 'material-icons sms-sent';
+                        smsIcon.style.cssText = 'font-size: 12px; margin-left: 4px; color: #34a853;';
+                        smsIcon.textContent = 'done';
+                        currentAppointment.appendChild(smsIcon);
+                        console.log('SMS checkmark added to appointment');
+                    }
+                    
+                    showToast(`SMS sent to patient for ${doctorName} (${appointmentTime})`);
+                    console.log('SMS sent for:', { doctor: doctorName, time: appointmentTime });
+                    
+                    button.disabled = false;
+                    button.innerHTML = 'Send SMS';
+                    modal.classList.remove('active');
+                }, 1500);
+            });
+
+            // Helper functions
+            function showToast(message) {
+                const toast = document.getElementById('toast');
+                toast.style.backgroundColor = successColor;
+                toast.innerHTML = `
+                    <i class="material-icons" style="margin-right: 8px;">check_circle</i>
+                    ${message}
+                `;
+                toast.style.display = 'flex';
+                toast.style.alignItems = 'center';
+                
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 3000);
+            }
+
+            // Close handlers
+            document.querySelectorAll('.close-button, .modal-button[data-action="cancel"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    console.log('Close button clicked');
+                    const modal = this.closest('.modal');
+                    modal.classList.remove('active');
+                });
+            });
+
+            // Close modals when clicking outside
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        console.log('Clicked outside modal');
+                        this.classList.remove('active');
+                    }
+                });
+            });
+
+            // Close on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    console.log('Escape key pressed');
+                    contextMenu.classList.remove('active');
+                    Object.values(modals).forEach(modal => {
+                        modal.classList.remove('active');
+                    });
+                }
+            });
+
+            console.log('All event handlers initialized');
+        });
+
+        function populateTimeSlots() {
+            const select = document.getElementById('rescheduleTime');
+            select.innerHTML = '';
+            for(let i = 8; i < 18; i++) {
+                const hour = i.toString().padStart(2, '0');
+                select.add(new Option(`${hour}:00 - ${hour}:59`, hour));
+            }
+        }
+
+        function updateSplitTimeSlots() {
+            const container = document.getElementById('splitTimeSlots');
+            const splitCount = document.getElementById('splitCount').value;
+            const appointmentTime = currentAppointment.querySelector('.appointment-time').textContent;
+            const [startTime] = appointmentTime.split(' - ');
+            const hour = parseInt(startTime.split(':')[0]);
+            
+            container.innerHTML = '';
+            const duration = 60 / parseInt(splitCount);
+            
+            for(let i = 0; i < splitCount; i++) {
+                const startMinute = i * duration;
+                const endMinute = startMinute + duration;
+                const slotStart = `${hour}:${Math.floor(startMinute).toString().padStart(2, '0')}`;
+                const slotEnd = `${hour}:${Math.ceil(endMinute).toString().padStart(2, '0')}`;
+                
+                container.innerHTML += `
+                    <div class="form-group">
+                        <label>Slot ${i + 1}</label>
+                        <input type="text" class="form-input" value="${slotStart} - ${slotEnd}" readonly>
+                    </div>
+                `;
+            }
+        }
+
+        // Update modal functions
+        function showModal(modal) {
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+        }
+
+        function hideModal(modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('active');
+        }
+
+        // Initialize modals display
+        Object.values(modals).forEach(modal => {
+            modal.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
